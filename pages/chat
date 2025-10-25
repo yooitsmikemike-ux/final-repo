@@ -1,0 +1,374 @@
+import React, { useState, useRef, useEffect } from "react";
+import { base44 } from "@/api/base44Client";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Send, Bot, User, Volume2, Thermometer } from "lucide-react";
+
+export default function Chat() {
+  const [user, setUser] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [speakingIndex, setSpeakingIndex] = useState(null);
+  const messagesEndRef = useRef(null);
+
+  useEffect(() => {
+    loadUserAndInitialize();
+  }, []);
+
+  const loadUserAndInitialize = async () => {
+    try {
+      const userData = await base44.auth.me();
+      setUser(userData);
+      
+      const userName = userData.full_name || userData.email?.split('@')[0] || "there";
+      const firstName = userName.split(' ')[0];
+      setMessages([
+        {
+          role: "assistant",
+          content: `👋 Hi ${firstName}! I'm HealBuddy, your health assistant.\n\nHow are you feeling today? You can ask me about:\n• Your symptoms\n• Any disease or health condition\n• Prevention tips\n• General health advice\n\nI'm here to help!`,
+          seriousness: null,
+        },
+      ]);
+    } catch (error) {
+      setMessages([
+        {
+          role: "assistant",
+          content: "👋 Hello! I'm HealBuddy, your health assistant.\n\nHow are you feeling today? You can ask me about:\n• Your symptoms\n• Any disease or health condition\n• Prevention tips\n• General health advice\n\nI'm here to help!",
+          seriousness: null,
+        },
+      ]);
+    }
+  };
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const analyzeSeriousness = (userQuery, aiResponse) => {
+    const queryLower = userQuery.toLowerCase();
+    const responseLower = aiResponse.toLowerCase();
+    
+    // Check for emergency keywords
+    const emergencyKeywords = [
+      'emergency', 'urgent', 'critical', 'severe pain', 'chest pain', 
+      'difficulty breathing', 'unconscious', 'stroke', 'heart attack',
+      'bleeding heavily', 'serious', 'call 108', 'go to hospital immediately',
+      'life-threatening', 'cannot breathe'
+    ];
+    
+    // Check for moderate concern keywords
+    const moderateKeywords = [
+      'consult doctor', 'see a doctor', 'medical attention', 'get checked',
+      'visit doctor', 'healthcare professional', 'persistent', 'worsening',
+      'seek medical', 'doctor soon'
+    ];
+    
+    // Check for informational/mild keywords
+    const mildKeywords = [
+      'prevention', 'awareness', 'general', 'tips', 'healthy', 'maintain',
+      'mild', 'common', 'usually not serious', 'self-care'
+    ];
+    
+    // Analyze both query and response
+    const hasEmergency = emergencyKeywords.some(word => 
+      queryLower.includes(word) || responseLower.includes(word)
+    );
+    
+    const hasModerate = moderateKeywords.some(word => 
+      responseLower.includes(word)
+    );
+    
+    const hasMild = mildKeywords.some(word => 
+      queryLower.includes(word) || responseLower.includes(word)
+    );
+    
+    if (hasEmergency) return 'high';
+    if (hasModerate) return 'moderate';
+    if (hasMild) return 'low';
+    
+    // Default based on response length and tone
+    if (responseLower.includes('serious') || responseLower.includes('concern')) {
+      return 'moderate';
+    }
+    
+    return 'low';
+  };
+
+  const getSeriousnessDisplay = (level) => {
+    if (!level || level === 'low') {
+      return {
+        color: 'bg-green-500',
+        textColor: 'text-white',
+        text: 'General Info',
+        icon: '✓',
+        description: 'Informational - No immediate concern'
+      };
+    }
+    
+    if (level === 'moderate') {
+      return {
+        color: 'bg-orange-500',
+        textColor: 'text-white',
+        text: 'Consult Doctor',
+        icon: '⚠️',
+        description: 'Moderate - See a doctor soon'
+      };
+    }
+    
+    if (level === 'high') {
+      return {
+        color: 'bg-red-500',
+        textColor: 'text-white',
+        text: 'Urgent',
+        icon: '🚨',
+        description: 'High Priority - Seek immediate help'
+      };
+    }
+  };
+
+  const speakMessage = (text, index) => {
+    window.speechSynthesis.cancel();
+    
+    if (speakingIndex === index) {
+      setSpeakingIndex(null);
+      return;
+    }
+
+    const cleanText = text.replace(/[🩺⚠️💡🛡️💊👋✓🚨•]/g, '');
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.rate = 0.9;
+    utterance.pitch = 1;
+    utterance.volume = 1;
+    
+    utterance.onend = () => {
+      setSpeakingIndex(null);
+    };
+    
+    setSpeakingIndex(index);
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const handleSend = async () => {
+    if (!input.trim() || isLoading) return;
+
+    const userMessage = input.trim();
+    setInput("");
+    setMessages((prev) => [...prev, { role: "user", content: userMessage }]);
+    setIsLoading(true);
+
+    try {
+      const userName = user?.full_name || user?.email?.split('@')[0] || "friend";
+      const firstName = userName.split(' ')[0];
+      
+      const response = await base44.integrations.Core.InvokeLLM({
+        prompt: `You are HealBuddy, a friendly health assistant talking to ${firstName}.
+
+User's question: "${userMessage}"
+
+IMPORTANT INSTRUCTIONS:
+1. Keep responses SHORT (2-3 paragraphs maximum, about 100-150 words)
+2. Use VERY SIMPLE English - as if explaining to a 10-year-old
+3. Use everyday words, avoid medical terms
+4. Be friendly and caring
+5. Use emojis (🩺, ⚠️, 💡, 💊) to make it easy to read
+6. If it's serious, say "Please call 108 or visit a doctor immediately"
+7. If moderate concern, say "You should see a doctor soon"
+8. Use bullet points (•) for lists
+
+RESPONSE FORMAT:
+• Start with a brief friendly response
+• Give 2-3 simple, clear points
+• End with what to do next
+
+Example good response:
+"Hi ${firstName}! A headache can happen for many reasons.
+
+Common causes:
+• Not drinking enough water
+• Stress or tiredness
+• Eye strain from screens
+
+What to do:
+• Rest and drink water
+• Take a pain reliever if needed
+• If it lasts more than 2 days, see a doctor
+
+Is there anything specific about your headache you'd like to know?"
+
+Keep it SHORT, SIMPLE, and FRIENDLY!`,
+      });
+
+      const seriousness = analyzeSeriousness(userMessage, response);
+
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: response, seriousness },
+      ]);
+    } catch (error) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: "I'm sorry, I'm having trouble right now. Please try again. If this is urgent, please call 108.",
+          seriousness: 'moderate',
+        },
+      ]);
+    }
+
+    setIsLoading(false);
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  return (
+    <div className="h-full flex flex-col bg-gradient-to-b from-purple-50 to-white">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200 px-4 lg:px-6 py-3 lg:py-4 shadow-sm flex-shrink-0">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 lg:gap-3">
+            <div className="w-10 h-10 lg:w-12 lg:h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center shadow-md">
+              <Bot className="w-5 h-5 lg:w-6 lg:h-6 text-white" />
+            </div>
+            <div>
+              <h2 className="text-base lg:text-xl font-bold text-gray-900">HealBuddy Chat</h2>
+              <p className="text-xs lg:text-sm text-gray-500">AI Health Assistant</p>
+            </div>
+          </div>
+          {user && (
+            <div className="text-right hidden sm:block">
+              <p className="text-xs lg:text-sm font-medium text-gray-900 truncate max-w-[150px]">
+                {user.full_name || user.email}
+              </p>
+              <p className="text-xs text-gray-500">Online</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Messages Area */}
+      <div className="flex-1 overflow-y-auto px-3 lg:px-6 py-4 lg:py-6 space-y-4">
+        {messages.map((message, index) => (
+          <div
+            key={index}
+            className={`flex gap-2 lg:gap-3 ${
+              message.role === "user" ? "justify-end" : "justify-start"
+            }`}
+          >
+            {message.role === "assistant" && (
+              <div className="w-8 h-8 lg:w-10 lg:h-10 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <Bot className="w-4 h-4 lg:w-5 lg:h-5 text-purple-600" />
+              </div>
+            )}
+            <div className="flex flex-col gap-2 max-w-[85%] lg:max-w-2xl">
+              <div
+                className={`rounded-2xl px-4 lg:px-5 py-3 lg:py-4 shadow-sm ${
+                  message.role === "user"
+                    ? "bg-gradient-to-r from-purple-600 to-purple-700 text-white"
+                    : "bg-white text-gray-800 border border-gray-100"
+                }`}
+              >
+                <p className="whitespace-pre-wrap leading-relaxed text-sm lg:text-base">
+                  {message.content}
+                </p>
+              </div>
+              
+              {message.role === "assistant" && message.seriousness && (
+                <div className="flex items-center gap-2 flex-wrap px-1">
+                  {getSeriousnessDisplay(message.seriousness) && (
+                    <Badge
+                      className={`${getSeriousnessDisplay(message.seriousness).color} ${getSeriousnessDisplay(message.seriousness).textColor} border-0 text-xs flex items-center gap-1 px-2 py-1`}
+                    >
+                      <Thermometer className="w-3 h-3" />
+                      <span>{getSeriousnessDisplay(message.seriousness).icon}</span>
+                      <span className="hidden sm:inline">{getSeriousnessDisplay(message.seriousness).text}</span>
+                    </Badge>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => speakMessage(message.content, index)}
+                    className={`text-gray-500 hover:text-purple-600 hover:bg-purple-50 h-7 px-2 ${
+                      speakingIndex === index ? "text-purple-600 bg-purple-50" : ""
+                    }`}
+                  >
+                    <Volume2 className={`w-4 h-4 ${speakingIndex === index ? "animate-pulse" : ""}`} />
+                    <span className="text-xs ml-1 hidden sm:inline">
+                      {speakingIndex === index ? "Stop" : "Listen"}
+                    </span>
+                  </Button>
+                </div>
+              )}
+            </div>
+            {message.role === "user" && (
+              <div className="w-8 h-8 lg:w-10 lg:h-10 bg-gradient-to-r from-purple-600 to-purple-700 rounded-full flex items-center justify-center flex-shrink-0">
+                <User className="w-4 h-4 lg:w-5 lg:h-5 text-white" />
+              </div>
+            )}
+          </div>
+        ))}
+
+        {isLoading && (
+          <div className="flex gap-2 lg:gap-3">
+            <div className="w-8 h-8 lg:w-10 lg:h-10 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+              <Bot className="w-4 h-4 lg:w-5 lg:h-5 text-purple-600" />
+            </div>
+            <div className="bg-white rounded-2xl px-4 lg:px-5 py-3 border border-gray-100 shadow-sm">
+              <div className="flex gap-2">
+                <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Advisory Banner */}
+      <div className="px-3 lg:px-6 py-2 lg:py-3 bg-yellow-50 border-t border-yellow-200 flex-shrink-0">
+        <div className="flex items-start gap-2 max-w-4xl mx-auto">
+          <span className="text-yellow-600 text-lg lg:text-xl mt-0.5">⚠️</span>
+          <div>
+            <p className="text-xs lg:text-sm font-semibold text-yellow-900">Advisory</p>
+            <p className="text-xs text-yellow-700">
+              For awareness only. Not a substitute for professional diagnosis. In emergencies, call 108 immediately.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Input Area */}
+      <div className="bg-white border-t border-gray-200 px-3 lg:px-6 py-3 lg:py-4 flex-shrink-0">
+        <div className="max-w-4xl mx-auto flex gap-2 lg:gap-3">
+          <Textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder="Type your symptoms or question here..."
+            className="resize-none min-h-[50px] lg:min-h-[60px] max-h-[100px] lg:max-h-[120px] rounded-xl border-gray-300 focus:border-purple-500 focus:ring-purple-500 text-sm lg:text-base"
+            disabled={isLoading}
+          />
+          <Button
+            onClick={handleSend}
+            disabled={!input.trim() || isLoading}
+            className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 rounded-xl px-4 lg:px-6 h-[50px] lg:h-[60px] shadow-lg"
+          >
+            <Send className="w-4 h-4 lg:w-5 lg:h-5" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
