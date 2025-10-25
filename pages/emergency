@@ -1,0 +1,210 @@
+import React from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Phone, Ambulance, Shield, Flame, User, Baby, Heart, AlertCircle } from "lucide-react";
+
+export default function Emergency() {
+  const emergencyContacts = [
+    {
+      name: "Ambulance",
+      description: "Medical emergency & ambulance",
+      number: "108",
+      icon: Ambulance,
+      color: "bg-red-500",
+    },
+    {
+      name: "Police",
+      description: "Police emergency services",
+      number: "100",
+      icon: Shield,
+      color: "bg-blue-500",
+    },
+    {
+      name: "Fire Services",
+      description: "Fire emergency & rescue",
+      number: "101",
+      icon: Flame,
+      color: "bg-orange-500",
+    },
+    {
+      name: "Women Helpline",
+      description: "24x7 helpline for women",
+      number: "1091",
+      icon: User,
+      color: "bg-pink-500",
+    },
+    {
+      name: "Child Helpline",
+      description: "Child protection services",
+      number: "1098",
+      icon: Baby,
+      color: "bg-cyan-500",
+    },
+  ];
+
+  const firstAidGuides = [
+    {
+      title: "Heart Attack",
+      icon: Heart,
+      color: "bg-red-50 border-red-200",
+      steps: [
+        "Stay with the person until help arrives",
+        "5 back blows between shoulder blades",
+        "5 abdominal thrusts (Heimlich)",
+        "Alternate until object clears",
+        "Call 108 if unsuccessful",
+      ],
+    },
+    {
+      title: "Choking",
+      icon: AlertCircle,
+      color: "bg-blue-50 border-blue-200",
+      steps: [
+        "Encourage coughing",
+        "5 back blows between shoulder blades",
+        "5 abdominal thrusts (Heimlich)",
+        "Alternate until object clears",
+        "Call 108 if unsuccessful",
+      ],
+    },
+    {
+      title: "Severe Bleeding",
+      icon: AlertCircle,
+      color: "bg-purple-50 border-purple-200",
+      steps: [
+        "Apply direct pressure to wound",
+        "Elevate injured area above heart",
+        "Use clean cloth or bandage",
+        "Don't remove embedded objects",
+        "Call 108 for serious injuries",
+      ],
+    },
+    {
+      title: "Poisoning",
+      icon: AlertCircle,
+      color: "bg-orange-50 border-orange-200",
+      steps: [
+        "Call 108 immediately",
+        "Don't induce vomiting",
+        "Keep poison container/label",
+        "If conscious, give water/milk",
+        "Monitor breathing until help arrives",
+      ],
+    },
+  ];
+
+  return (
+    <div className="h-full overflow-y-auto bg-gradient-to-b from-red-50 to-white">
+      <div className="max-w-6xl mx-auto px-6 py-8">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-red-500 to-red-600 rounded-2xl shadow-lg mb-4">
+            <Phone className="w-8 h-8 text-white" />
+          </div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Emergency Services</h1>
+          <p className="text-gray-600">Quick access to emergency contacts and first aid guidance</p>
+        </div>
+
+        {/* Emergency Contacts */}
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-12">
+          {emergencyContacts.map((contact) => (
+            <Card key={contact.number} className="shadow-lg border-gray-100 hover:shadow-xl transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex items-start gap-4 mb-4">
+                  <div className={`w-12 h-12 ${contact.color} rounded-xl flex items-center justify-center shadow-md`}>
+                    <contact.icon className="w-6 h-6 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-bold text-gray-900 text-lg">{contact.name}</h3>
+                    <p className="text-sm text-gray-600">{contact.description}</p>
+                  </div>
+                </div>
+                <div className="text-center mb-4">
+                  <p className="text-4xl font-bold text-gray-900">{contact.number}</p>
+                </div>
+                <Button
+                  className={`w-full ${contact.color} hover:opacity-90 text-white rounded-xl h-12 shadow-md`}
+                  onClick={() => window.open(`tel:${contact.number}`)}
+                >
+                  <Phone className="w-4 h-4 mr-2" />
+                  Call Now
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Quick Actions */}
+        <Card className="bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-xl border-none mb-8">
+          <CardHeader>
+            <CardTitle className="text-2xl flex items-center gap-2">
+              <AlertCircle className="w-6 h-6" />
+              Quick Emergency Actions
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Button
+              onClick={() => window.open(`tel:108`)}
+              className="w-full bg-white text-purple-600 hover:bg-purple-50 rounded-xl h-14 text-lg font-semibold shadow-md"
+            >
+              <Ambulance className="w-5 h-5 mr-2" />
+              Call Ambulance (108)
+            </Button>
+            <Button
+              onClick={() => window.open("https://www.google.com/maps/search/hospital+near+me", "_blank")}
+              variant="outline"
+              className="w-full bg-transparent border-2 border-white text-white hover:bg-white hover:text-purple-600 rounded-xl h-14 text-lg font-semibold"
+            >
+              <Heart className="w-5 h-5 mr-2" />
+              Find Nearest Hospital
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* First Aid Guides */}
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">Basic First Aid Guidelines</h2>
+          <div className="grid md:grid-cols-2 gap-6">
+            {firstAidGuides.map((guide, index) => (
+              <Card key={index} className={`${guide.color} border-2 shadow-md`}>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <guide.icon className="w-5 h-5" />
+                    {guide.title}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ol className="space-y-2">
+                    {guide.steps.map((step, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                        <span className="font-bold text-purple-600">{i + 1}.</span>
+                        <span className="leading-relaxed">{step}</span>
+                      </li>
+                    ))}
+                  </ol>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+
+        {/* Disclaimer */}
+        <Card className="bg-yellow-50 border-2 border-yellow-300 shadow-md">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-6 h-6 text-yellow-600 flex-shrink-0 mt-1" />
+              <div>
+                <h3 className="font-bold text-yellow-900 mb-2">Important Disclaimer</h3>
+                <p className="text-sm text-yellow-800 leading-relaxed">
+                  These are basic first aid guidelines only. In any emergency, call 108 or 112 immediately. 
+                  These numbers work from any phone. Do not attempt procedures you are not trained for. 
+                  In serious emergency, call professional medical services immediately.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
