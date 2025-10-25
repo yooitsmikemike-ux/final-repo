@@ -1,0 +1,352 @@
+import React, { useState } from "react";
+import { base44 } from "@/api/base44Client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
+import { Sparkles, Heart, Apple, Dumbbell, Droplets } from "lucide-react";
+
+export default function HealthTips() {
+  const [formData, setFormData] = useState({
+    age: "",
+    gender: "",
+    height: "",
+    weight: "",
+    activity_level: "",
+    diet_type: "",
+    health_goal: "",
+    conditions: "",
+  });
+  const [tips, setTips] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setTips(null);
+
+    try {
+      const response = await base44.integrations.Core.InvokeLLM({
+        prompt: `Generate personalized health tips for someone with these details:
+- Age: ${formData.age}
+- Gender: ${formData.gender}
+- Height: ${formData.height} cm
+- Weight: ${formData.weight} kg
+- Activity Level: ${formData.activity_level}
+- Diet Type: ${formData.diet_type}
+- Health Goal: ${formData.health_goal}
+- Existing Conditions: ${formData.conditions || "None"}
+
+Provide practical, actionable health tips in these categories:
+- nutrition: 4-5 diet and nutrition tips
+- exercise: 4-5 exercise and fitness tips
+- lifestyle: 4-5 lifestyle and wellness tips
+- hydration: 2-3 water intake tips
+
+Keep tips simple, practical, and encouraging. Use simple English.`,
+        response_json_schema: {
+          type: "object",
+          properties: {
+            nutrition: {
+              type: "array",
+              items: { type: "string" },
+            },
+            exercise: {
+              type: "array",
+              items: { type: "string" },
+            },
+            lifestyle: {
+              type: "array",
+              items: { type: "string" },
+            },
+            hydration: {
+              type: "array",
+              items: { type: "string" },
+            },
+          },
+        },
+      });
+
+      setTips(response);
+    } catch (error) {
+      console.error("Error generating tips:", error);
+    }
+
+    setIsLoading(false);
+  };
+
+  const TipsSection = ({ title, tips, icon: Icon, bgColor, iconColor }) => (
+    <Card className={`${bgColor} border-2 border-opacity-30 shadow-md`}>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-lg">
+          <div className={`w-10 h-10 ${iconColor} bg-opacity-20 rounded-lg flex items-center justify-center`}>
+            <Icon className={`w-5 h-5 ${iconColor.replace('bg-', 'text-')}`} />
+          </div>
+          {title}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <ul className="space-y-3">
+          {tips.map((tip, index) => (
+            <li key={index} className="flex items-start gap-2 text-gray-700">
+              <span className="text-purple-600 font-bold mt-1">✓</span>
+              <span className="leading-relaxed">{tip}</span>
+            </li>
+          ))}
+        </ul>
+      </CardContent>
+    </Card>
+  );
+
+  return (
+    <div className="h-full overflow-y-auto bg-gradient-to-b from-green-50 to-white">
+      <div className="max-w-4xl mx-auto px-6 py-8">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-green-400 to-green-600 rounded-2xl shadow-lg mb-4">
+            <Sparkles className="w-8 h-8 text-white" />
+          </div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Get Personalized Health Tips 💚
+          </h1>
+          <p className="text-gray-600">
+            Share your details and get customized health recommendations
+          </p>
+        </div>
+
+        {!tips && (
+          <Card className="shadow-lg border-none">
+            <CardContent className="p-6">
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Age & Gender */}
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="age" className="text-gray-700 font-medium">
+                      Age <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="age"
+                      type="number"
+                      value={formData.age}
+                      onChange={(e) => setFormData({ ...formData, age: e.target.value })}
+                      placeholder="Enter your age"
+                      className="mt-2 rounded-lg"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="gender" className="text-gray-700 font-medium">
+                      Gender <span className="text-red-500">*</span>
+                    </Label>
+                    <Select
+                      value={formData.gender}
+                      onValueChange={(value) => setFormData({ ...formData, gender: value })}
+                      required
+                    >
+                      <SelectTrigger className="mt-2 rounded-lg">
+                        <SelectValue placeholder="Select gender" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="male">Male</SelectItem>
+                        <SelectItem value="female">Female</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Height & Weight */}
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="height" className="text-gray-700 font-medium">
+                      Height (cm) <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="height"
+                      type="number"
+                      value={formData.height}
+                      onChange={(e) => setFormData({ ...formData, height: e.target.value })}
+                      placeholder="e.g., 170"
+                      className="mt-2 rounded-lg"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="weight" className="text-gray-700 font-medium">
+                      Weight (kg) <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="weight"
+                      type="number"
+                      value={formData.weight}
+                      onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
+                      placeholder="e.g., 70"
+                      className="mt-2 rounded-lg"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Activity Level & Diet Type */}
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="activity_level" className="text-gray-700 font-medium">
+                      Activity Level <span className="text-red-500">*</span>
+                    </Label>
+                    <Select
+                      value={formData.activity_level}
+                      onValueChange={(value) => setFormData({ ...formData, activity_level: value })}
+                      required
+                    >
+                      <SelectTrigger className="mt-2 rounded-lg">
+                        <SelectValue placeholder="Select activity level" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="sedentary">Sedentary (Little to no exercise)</SelectItem>
+                        <SelectItem value="moderate">Moderate (Exercise 3-4 days/week)</SelectItem>
+                        <SelectItem value="active">Active (Exercise 5+ days/week)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="diet_type" className="text-gray-700 font-medium">
+                      Diet Type <span className="text-red-500">*</span>
+                    </Label>
+                    <Select
+                      value={formData.diet_type}
+                      onValueChange={(value) => setFormData({ ...formData, diet_type: value })}
+                      required
+                    >
+                      <SelectTrigger className="mt-2 rounded-lg">
+                        <SelectValue placeholder="Select diet type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="vegetarian">Vegetarian</SelectItem>
+                        <SelectItem value="non-vegetarian">Non-Vegetarian</SelectItem>
+                        <SelectItem value="vegan">Vegan</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Health Goal */}
+                <div>
+                  <Label htmlFor="health_goal" className="text-gray-700 font-medium">
+                    Health Goal <span className="text-red-500">*</span>
+                  </Label>
+                  <Select
+                    value={formData.health_goal}
+                    onValueChange={(value) => setFormData({ ...formData, health_goal: value })}
+                    required
+                  >
+                    <SelectTrigger className="mt-2 rounded-lg">
+                      <SelectValue placeholder="Select your health goal" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="weight_loss">Weight Loss</SelectItem>
+                      <SelectItem value="fitness">Build Fitness</SelectItem>
+                      <SelectItem value="skin_hair">Improve Skin & Hair</SelectItem>
+                      <SelectItem value="energy">Boost Energy</SelectItem>
+                      <SelectItem value="general">General Health</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Existing Conditions */}
+                <div>
+                  <Label htmlFor="conditions" className="text-gray-700 font-medium">
+                    Existing Health Conditions (Optional)
+                  </Label>
+                  <Textarea
+                    id="conditions"
+                    value={formData.conditions}
+                    onChange={(e) => setFormData({ ...formData, conditions: e.target.value })}
+                    placeholder="e.g., diabetes, hypertension, allergies"
+                    className="mt-2 rounded-lg min-h-[80px]"
+                  />
+                </div>
+
+                {/* Submit Button */}
+                <Button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 rounded-xl h-14 text-lg font-semibold shadow-lg"
+                >
+                  <Heart className="w-5 h-5 mr-2" />
+                  {isLoading ? "Generating Tips..." : "Get Personalized Health Tips"}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Loading State */}
+        {isLoading && (
+          <div className="text-center py-12">
+            <div className="inline-block w-12 h-12 border-4 border-green-200 border-t-green-600 rounded-full animate-spin mb-4" />
+            <p className="text-gray-600">Creating your personalized health plan...</p>
+          </div>
+        )}
+
+        {/* Tips Display */}
+        {tips && !isLoading && (
+          <div className="space-y-6">
+            <div className="text-center mb-6">
+              <Button
+                variant="outline"
+                onClick={() => setTips(null)}
+                className="rounded-lg"
+              >
+                ← Create New Plan
+              </Button>
+            </div>
+
+            <TipsSection
+              title="Nutrition & Diet"
+              tips={tips.nutrition}
+              icon={Apple}
+              bgColor="bg-orange-50"
+              iconColor="bg-orange-500"
+            />
+
+            <TipsSection
+              title="Exercise & Fitness"
+              tips={tips.exercise}
+              icon={Dumbbell}
+              bgColor="bg-blue-50"
+              iconColor="bg-blue-500"
+            />
+
+            <TipsSection
+              title="Lifestyle & Wellness"
+              tips={tips.lifestyle}
+              icon={Heart}
+              bgColor="bg-pink-50"
+              iconColor="bg-pink-500"
+            />
+
+            <TipsSection
+              title="Hydration"
+              tips={tips.hydration}
+              icon={Droplets}
+              bgColor="bg-cyan-50"
+              iconColor="bg-cyan-500"
+            />
+
+            <Card className="bg-purple-50 border-2 border-purple-200">
+              <CardContent className="p-5">
+                <p className="text-sm text-purple-800">
+                  <strong>💡 Remember:</strong> These tips are personalized recommendations for awareness. 
+                  Always consult healthcare professionals before making significant changes to your diet or exercise routine, 
+                  especially if you have existing health conditions.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
