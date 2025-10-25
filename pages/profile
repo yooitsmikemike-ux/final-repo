@@ -1,0 +1,205 @@
+import React, { useState, useEffect } from "react";
+import { base44 } from "@/api/base44Client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Heart, Save, Loader2 } from "lucide-react";
+
+export default function Profile() {
+  const [user, setUser] = useState(null);
+  const [formData, setFormData] = useState({
+    full_name: "",
+    age: "",
+    gender: "",
+    state: "",
+    emergency_contact: "",
+    medical_conditions: "",
+  });
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState("");
+
+  useEffect(() => {
+    loadUserData();
+  }, []);
+
+  const loadUserData = async () => {
+    try {
+      const userData = await base44.auth.me();
+      setUser(userData);
+      setFormData({
+        full_name: userData.full_name || "",
+        age: userData.age || "",
+        gender: userData.gender || "",
+        state: userData.state || "",
+        emergency_contact: userData.emergency_contact || "",
+        medical_conditions: userData.medical_conditions || "",
+      });
+    } catch (error) {
+      console.error("Error loading user:", error);
+    }
+  };
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    setSaveMessage("");
+    
+    try {
+      await base44.auth.updateMe(formData);
+      setSaveMessage("Profile updated successfully!");
+      setTimeout(() => setSaveMessage(""), 3000);
+    } catch (error) {
+      setSaveMessage("Failed to update profile. Please try again.");
+      setTimeout(() => setSaveMessage(""), 3000);
+    }
+    
+    setIsSaving(false);
+  };
+
+  return (
+    <div className="h-full overflow-y-auto bg-gradient-to-b from-purple-50 to-white">
+      <div className="max-w-3xl mx-auto px-4 lg:px-6 py-6 lg:py-8">
+        {/* Header */}
+        <div className="text-center mb-6 lg:mb-8">
+          <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-2">Your Health Profile</h1>
+          <p className="text-sm lg:text-base text-gray-600">Help us provide personalized health advice</p>
+        </div>
+
+        {/* Personal Information Card */}
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden mb-6">
+          <div className="bg-gradient-to-r from-purple-500 to-purple-600 px-4 lg:px-6 py-3 lg:py-4">
+            <div className="flex items-center gap-2 text-white">
+              <Heart className="w-4 h-4 lg:w-5 lg:h-5" />
+              <h2 className="text-base lg:text-lg font-semibold">Personal Information</h2>
+            </div>
+          </div>
+
+          <div className="p-4 lg:p-6 space-y-4 lg:space-y-6">
+            {/* Full Name */}
+            <div>
+              <Label htmlFor="full_name" className="text-gray-700 font-medium text-sm lg:text-base">
+                Full Name <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="full_name"
+                value={formData.full_name}
+                onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                placeholder="Enter your full name"
+                className="mt-2 rounded-lg text-sm lg:text-base"
+              />
+            </div>
+
+            {/* Age & Gender */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="age" className="text-gray-700 font-medium text-sm lg:text-base">
+                  Age <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="age"
+                  type="number"
+                  value={formData.age}
+                  onChange={(e) => setFormData({ ...formData, age: e.target.value })}
+                  placeholder="Enter your age"
+                  className="mt-2 rounded-lg text-sm lg:text-base"
+                />
+              </div>
+              <div>
+                <Label htmlFor="gender" className="text-gray-700 font-medium text-sm lg:text-base">
+                  Gender <span className="text-red-500">*</span>
+                </Label>
+                <Select
+                  value={formData.gender}
+                  onValueChange={(value) => setFormData({ ...formData, gender: value })}
+                >
+                  <SelectTrigger className="mt-2 rounded-lg text-sm lg:text-base">
+                    <SelectValue placeholder="Select gender" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="male">Male</SelectItem>
+                    <SelectItem value="female">Female</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* State */}
+            <div>
+              <Label htmlFor="state" className="text-gray-700 font-medium text-sm lg:text-base">
+                State/UT <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="state"
+                value={formData.state}
+                onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                placeholder="Enter state"
+                className="mt-2 rounded-lg text-sm lg:text-base"
+              />
+            </div>
+
+            {/* Emergency Contact */}
+            <div>
+              <Label htmlFor="emergency_contact" className="text-gray-700 font-medium text-sm lg:text-base">
+                Emergency Contact Number <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="emergency_contact"
+                type="tel"
+                value={formData.emergency_contact}
+                onChange={(e) => setFormData({ ...formData, emergency_contact: e.target.value })}
+                placeholder="Enter emergency contact number"
+                className="mt-2 rounded-lg text-sm lg:text-base"
+              />
+            </div>
+
+            {/* Medical Conditions */}
+            <div>
+              <Label htmlFor="medical_conditions" className="text-gray-700 font-medium text-sm lg:text-base">
+                Medical Conditions (Optional)
+              </Label>
+              <Textarea
+                id="medical_conditions"
+                value={formData.medical_conditions}
+                onChange={(e) => setFormData({ ...formData, medical_conditions: e.target.value })}
+                placeholder="e.g., diabetes, hypertension, allergies"
+                className="mt-2 rounded-lg min-h-[100px] text-sm lg:text-base"
+              />
+            </div>
+
+            {/* Save Message */}
+            {saveMessage && (
+              <div className={`text-center p-3 rounded-lg ${
+                saveMessage.includes("success") 
+                  ? "bg-green-50 text-green-800 border border-green-200" 
+                  : "bg-red-50 text-red-800 border border-red-200"
+              }`}>
+                <p className="text-sm font-medium">{saveMessage}</p>
+              </div>
+            )}
+
+            {/* Save Button */}
+            <Button
+              onClick={handleSave}
+              disabled={isSaving}
+              className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 rounded-lg py-5 lg:py-6 text-base lg:text-lg font-semibold shadow-lg"
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="w-5 h-5 mr-2" />
+                  Save Profile
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
